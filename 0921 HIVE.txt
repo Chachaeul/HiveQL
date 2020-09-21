@@ -1,0 +1,91 @@
+다운받은 거 winscp에서 root로
+
+하둡 키고 jps 확인
+
+ll
+tar zxvf apache-hive~~
+mv apache-hive~~ hive2
+ll
+rm apache-hive~~ 		y
+
+gedit /etc/profile
+-------------------------------
+export HIVE_HOME=/root/hive2
+export PATH=$PATH:$HIVE_HOME/bin
+
+source /etc/profile
+
+stop-dfs.sh
+stop-yarn.sh
+reboot
+
+start-dfs.sh
+start-yarn.sh
+jps		// 확인
+
+hive		// 바뀌는지 확인
+quit;		//종료 명령어
+
+*WinSCP로 옮기기 
+mysql-connector을 hive2/bin 폴더에
+		
+		
+ll /root/hive2/conf
+		
+gedit hive-site.xml
+-------------------------------
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl" ?>
+
+<configuration>
+      <property>
+            <name>hive.metastore.local</name>
+            <value>true</value>
+      </property>
+      <property>
+            <name>javax.jdo.option.ConnectionURL</name>
+            <value>jdbc:mysql://mysql_ip:3306/hive?useSSL=false&amp;createDatabaseIfNotExist=true&amp;serverTimezone=UTC</value>
+      </property>
+      <property>
+            <name>javax.jdo.option.ConnectionDriverName</name>
+            <value>com.mysql.jdbc.Driver</value>
+      </property>
+      <property>
+            <name>javax.jdo.option.ConnectionUserName</name>
+            <value>hive</value> 
+      </property>
+      <property>
+            <name>javax.jdo.option.ConnectionPassword</name>
+            <value>hive</value>
+      </property>
+</configuration>
+
+
+-mysql 
+mysql -uroot -p1111
+create user hive@localhost identified by 'hive';
+grant all privileges on *.* to 'hive'@'%' identified by 'hive';
+flush privileges;
+exit;
+
+mysql -uhive -phive
+create database hive;
+use hive;
+
+-다시 리눅스
+schematool -initSchema -dbType mysql		//complete 확인
+
+
+
+
+방화벽 풀기
+제어판 > 시스템 및 보안 >Windows Defender 방화벽
+고급 설정 > 인바운드 규칙 > 새규칙 > 포트 > 포트 번호 3306 >이외 모두 기본 값으로
+
+
+
+
+
+
+
+
