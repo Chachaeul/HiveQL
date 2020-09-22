@@ -1,0 +1,141 @@
+start-dfs.sh
+start-yarn.sh
+jps			//확인
+hdfs dfs -ls -R /
+
+(hdfs dfs -mkdir /user)		//user 폴더 없으면 만들기
+
+hdfs dfs -mkdir /user/hive
+hdfs dfs -mkdir /user/hive/warehouse
+
+(hdfs dfs -ls /tmp)			// tmp폴더 있는지 확인
+
+((
+hdfs dfs -chmod g+x /tmp			// 권한을 주는 것, 이미 주어져 있을 것. 안해도 됨
+hdfs dfs -chmod g+x /user/hive
+hdfs dfs -chmod g+x /user/hive/warehouse
+))
+
+hive 		// 잘 작동하는 지 확인
+
+// 단순히 hdfs에 저장하는 것을 넘어 hive를 활용해 테이블 형태로 저장하는 방법을 배울 것.
+emp.csv, dept.csv, salgrade 3개의 파일을 winscp 이용해 리눅스 source 폴더에 전송
+
+hive>에
+create table dept(
+	dname string,
+	loc string,
+	deptno int
+	) row format delimited fields terminated by ',';		
+// create했을 때, db가 아닌 파일로 저장되기 때문에 마지막 문장 붙여줌
+
+show tables;
+desc dept;
+			
+create table emp(
+	empno int,
+	ename string,
+	job string,
+	mgr int,
+	hiredate string,
+	sal int,
+	comm int,
+	deptno int
+	) row format delimited fields terminated by ',';
+				
+				
+create table salgrade(
+	grade int,
+	losal int,
+	hisal int
+	) row format delimited fields terminated by ',';
+			
+show tables;
+			
+//3개의 csv파일을 하이브 테이블로 로드
+load data local inpath '/root/source/emp.csv' overwrite into table emp;
+load data local inpath '/root/source/dept.csv' overwrite into table dept;
+load data local inpath '/root/source/salgrade.csv' overwrite into table salgrade;
+			
+select * from emp;
+select * from dept;
+select * from salgrade;
+
+//새 터미널 하나 열기 ( 원래 터미널은 hive가 접속돼 있는 상태, 새로운 터미널은 ~ ) 
+hdfs dfs -ls /user/hive/warehouse		// hive - 세 개의 테이블이 각각 디렉토리로 만들어져 있다
+hdfs dfs -ls /user/hive/warehouse/emp		// csv 파일이 들어가 있다.
+
+//mysql 에서 (use hive; 된 상태)
+desc tbls;
+select tbl_name from tbls;
+
+//~터미널 끄고 hive>에서
+select d.deptno, d.dname, e.ename, e.sal from emp e, dept d where e.deptno = d.deptno;		//52초
+select d.deptno, d.dname, e.ename, e.sal from emp e, dept d where e.deptno = d.deptno and e.job like '%CLERK%';		// 조건 추가 - 40초 오히려 시간이 적게 걸린다. 데이터가 적을수록 효율이 떨어짐
+select deptno,count(*) cnt, sum(sal) sum_sal avg(sal), avg_sal from emp groupby deptno order by deptno;	//71초 하나하나 매칭하며 추출하는 작업이라 오래걸림		
+
+create table ontime( year int, month int,  ayofmonth int, 	dayofweek int, deptime int, crsdeptime int, 	arrtime int, crsarrtime int, uniquecarrier string, flightnum int, tailnum string, actualelapsedtime int, crselapsedtime int, airtime int, arrdelay int, depdelay int, origin string, dest string, distance int, taxiin int, taxiout int, cancelled int, cancellationcode string, deverted int, carrierdelay string, weatherdelay string, nasdelay string, securitydelay string, lateaircraftdelay string)	partitioned by (delayyear int) row format delimited fields  terminated by ',' lines terminated by '\n' stored as textfile;
+	
+
+//새터미널 열어서 각 파일의 첫번째 줄을 삭제하여 load할 것.
+cd /root/source/airline
+
+sed -e '1d' 2006.csv > 2006_new.csv	//원본에 영향없이 다른 곳에 복사를 해서 파일을 수정하고 싶을 때 sed
+sed -e '1d' 2007.csv > 2007_new.csv
+sed -e '1d' 2008.csv > 2008_new.csv
+
+
+//hive>에서
+load data local inpath '/root/source/airline/2006_new.csv' overwrite into table ontime partition(delayyear = '2006');		//2006이라는 이름의 폴더를 만드는 것
+load data local inpath '/root/source/airline/2007_new.csv' overwrite into table ontime partition(delayyear = '2007');
+load data local inpath '/root/source/airline/2008_new.csv' overwrite into table ontime partition(delayyear = '2008');
+
+select * from ontime limit 10;		// 그냥 실행
+select count(*) from ontime; 		// 조건이나 집계, 정렬이 붙으면 맵리듀스가 작동 됨
+
+
+select year,month, count(*) from ontime where depdelay>0 group by year, month order by yaer, month;
+
+
+- 파일목록 확인
+				[root@master airline]에서
+				
+				hdfs dfs -ls /user/hive/warehouse/ontime
+				hdfs dfs -ls /user/hive/warehouse/ontime/delayyear=2006
+								
+		- 도착 지연 건수
+				hive> 에서
+				
+				select year, month, count(*) from ontime
+				where arrdelay>0 group by year, month order by year, month;						
+				
+		- 조인 연습
+				http://stat-computing.org/dataexpo/2009/supplemental-data.html 들어가서
+				airports.csv carriers.csv 2개 다운 받기  //파란글씨로 써져있음
+				다운받은 2개를 winSC에서 source/airline 폴더에 업로드한다.
+				
+				carriers.csv 파일의 항공사 코드에서 쌍따옴표를 제거! (정규표현식 사용!)
+				
+				[root@master airline]에서
+				
+				find .-name carriers.csv -exec perl -p -i -e 's/"//g' {} \;
+				cat carriers.csv  //여기서 쌍따옴표 안보이면 성공!
+				(나는 그런 파일이나 디렉토리가 없다고 뜨는데 그래도 일단 지워지긴해서 그냥 하는 중!)
+				
+				hive> 에서
+
+				create table carrier_code(
+						code string,
+						description string
+				) row format delimited fields  terminated by ',' lines terminated by '\n' stored as textfile;
+
+				load data local inpath '/root/source/airline/carriers.csv' overwrite into table carrier_code;
+				
+				select a.year, a.uniquecarrier, c.description, count(*) 
+				from ontime a join carrier_code c 
+				on a.uniquecarrier=c.code 
+				where a.arrdelay > 0 
+				group by a.year, a.uniquecarrier, c.description
+				order by a.year, a.uniquecarrier, c.description;
+
+
