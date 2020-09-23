@@ -1,0 +1,32 @@
+start-dfs.sh
+start-yarn.sh
+hive				// 준비
+
+create table ontime_depdelay(year int, month int, count int);
+			
+insert overwrite table ontime_depdelay select year,month, count(*) from ontime where depdelay>0 group by year, month order by year, month;
+
+select * from ontime_depdelay limit 20;
+insert overwrite directory '/tmp/airport_result' select * from ontime_depdelay;
+
+
+//별도의 터미널 창에
+hdfs dfs -ls /tmp/airport_result
+hdfs dfs -cat /tmp/airport_result/000000_0
+
+hdfs dfs -ls /user/hive/warehouse/ontime
+hdfs dfs -ls /user/hive/warehouse/ontime/delayyear =2006
+			
+//hive>
+create table ontime2( year int, month int, uniquecarrier string, arrdelay int, depdelay int) clustered by(uniquecarrier) into 20 buckets;
+insert overwrite table ontime2 select year, month, uniquecarrier, arrdelay, depdelay from ontime;
+
+
+//별도의 터미널 창에
+hdfs dfs -ls /user/hive/warehouse/ontime2
+		
+//hive>에서
+select uniquecarrier. count(*) from ontime2 tablesample(bucket 1 out of 20)group by uniquecarrier;		// )와 group은 붙여 써야 한다
+
+
+-HIVE 완료-

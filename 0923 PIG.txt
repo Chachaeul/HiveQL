@@ -1,0 +1,50 @@
+//pig다운로드
+http://pig.apache.org/releases.html#Download > Download a release now! 클릭 > http://mirror.apache-kr.org/pig >0.17버전  > tat.gz(220M) 다운받기
+
+winscp로 리눅스 root에 보내기
+
+//리눅스 ~에서
+tar zxvf pig-0.17.0.tar.gz
+mv pig-0.17.0 pig017
+rm pig-0.17.0.tar.gz
+
+gedit /etc/profile
+-------------------
+export PIG_HOME=/root/pig017
+export PATH=$PATH:$PIG_HOME/bin
+------------------------
+
+source /etc/profile
+stop-dfs.sh
+stop-yarn.sh
+reboot
+			
+start-dfs.sh
+start-yarn.sh
+pig
+
+quit;
+
+mr-jobhistory-daemon.sh start historyserver
+jps		//JonHistoryServer 뜨는 지 확인
+
+cat /etc/passwd	
+cp /etc/passwd /root/source/passwd
+
+hdfs dfs -put /root/source/passwd /upload
+hdfs dfs -ls /upload
+
+pig
+
+A = LOAD '/upload/passwd' using PigStorage(':');
+DUMP A;
+			
+B = FOREACH A GENERATE $0 AS id;
+DUMP B;
+		
+STORE B INTO '/upload/pig_output/passwd';
+
+//새터미널>
+hdfs dfs -ls /upload/pig_output/passwd
+hdfs dfs -cat /upload/pig_output/passwd/part-m-00000
+
