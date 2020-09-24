@@ -1,0 +1,61 @@
+http://spark.apache.org > 다운로드 클릭 > 2.대로 바꿔서 다운 받기, 3.대 버전도 하나 더 받아놓기(시간날때)
+winscp로 리눅스 root에 파일들 옮기기
+
+마스터>
+tar zxvf spark(tab키)
+ mv spark(tab키) spark
+gedit /etc/profile
+------------------------
+export SPARK_HOME=/root/spark
+export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+---------------------------
+source /etc/profile
+
+stop-dfs.sh
+stop-yarn.sh
+reboot
+
+하둡 켜지말고 
+
+spark-shell		//scala> 뜨면 됨
+sc
+spark
+3+4
+ctrl+c로 빠져나옴
+
+pyspark		// >>>뜨면 됨
+sc
+spark
+3+4
+exit()
+
+free -g
+grep -c processor /proc/cpuinfo	
+
+cd $SPARK_HOME/conf
+cp spark-env.sh.template spark-env.sh
+		
+gedit spark-env.sh
+----------------------------
+export SPARK_WORKER_INSTANCES=3
+----------------------------
+		
+start-master.sh
+
+vm에서 마스터에서 오른쪽 버튼 > 네트워크 > 고급 > 포트 포워딩 8080 열려있는 지 확인
+윈도우에서 http://192.168.10.1:8080 확인 	//Spark Master at spark://master:7077 뜨면 성공
+
+start-slave.sh spark://master:7077 -m 512m -c 1
+
+jps		//worker 3개 뜨나
+		
+stop-slave.sh
+stop-master.sh
+
+
+
+
+
+
+
+

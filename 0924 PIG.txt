@@ -1,0 +1,41 @@
+- http://hdr.undp.org/en/data 	..에서 다운로드 받을 데이터를 전처리 해놓은 데이터를 네쏭이 줌으로 보내줌 (hd.zip 다운받아서 압축풀기)
+
+- winSCP로 리눅스의 source 폴더에 두개의 csv 파일 넣기 
+
+- 터미널 >
+start-dfs.sh
+start-yarn.dfs
+mr-jobhistory-daemon.sh start historyserver
+jps		//historyserver 잘 작동되는 지 확인
+pig		//실행
+새 터미널 하나 더 열어놓기
+
+- 새 터미널 >
+hdfs dfs -put /root/source/hdi-data.csv /upload
+hdfs dfs -ls /upload		//hdi-data 잘 올라갔는 지 확인
+
+- pig>
+A = LOAD '/upload/hdi-data.csv' using PigStorage(',') AS (id:int, country:chararray, hdi:float, lifeex:int, mych:int, eysch:int, gni:int);
+
+B = FILTER A BY gni >= 2000;
+			
+C = ORDER B BY gni;
+			
+STORE C INTO '/upload/hdi';
+			
+- 새 터미널 >
+hdfs dfs -ls /upload/hdi
+hdfs dfs -cat /upload/hdi/part-r-00000
+
+hdfs dfs -put /root/source/export-data.csv /upload
+hdfs dfs -ls /upload 
+
+- pig>
+D = LOAD '/upload/export-data.csv' using PigStorage(',') AS (country:chararray, export:float);
+E = JOIN C BY country, D BY country;
+DUMP E;
+
+quit;
+mr-jobhistory-daemon.sh stop historyserver
+
+

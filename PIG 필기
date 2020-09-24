@@ -21,7 +21,7 @@ Pig
 			pig
 		
 	2) JonHistoryServer 실행 (pig quit;한 뒤)
-		mr-jobhistory-daemon.sh start historyserver
+		mr-jobhistory-daemon.sh start historyserver		//끌때는 stop
 		jps		//JonHistoryServer 뜨는 지 확인
 		
 	3) 실습1 : DUMP, STORE
@@ -46,42 +46,77 @@ Pig
 			hdfs dfs -cat /upload/pig_output/passwd/part-m-00000
 	
 	4) 실습 2 : wordcount
-			- 샘플 데이터를 hdfs로 전송
-				// README.txt가 있는지 확인
-				hdfs dfs -ls /upload
-						
-				// 있으면 안해도 되용
-				hdfs dfs -put $HADOOP_HOME/README.txt /upload
-						
-			- 맵리듀스 모드로 pig 실행
-				// pig가 꺼져있다면 이걸로 실행하고 켜져있으면 그냥 하던 곳에서 바로 하면 됨
-				pig -x mapreduce  	(사실 pig 만 실행해도 자동으로 되긴 함)
-				pig -x local
-				
-			- 샘플 데이터를 A 변수에 로드 후 단어 수 집계
-				grant> 에서
-						
-				A = LOAD '/upload/README.txt';
-						
-				// README.txt 에서 한 단어씩 뽑아서 한 줄씩 뽑아서 B에 저장
-				B = FOREACH A GENERATE FLATTEN(TOKENIZE((chararray)$0)) AS word;
-				DUMP B;
-						
-				// 단어 별로 묶음
-				C = GROUP B BY word;
-						
-				// 단어로 묶여있는 그룹별로 숫자를 세서 저장
-				D = FOREACH C GENERATE group AS word, COUNT($1) AS count;
-						
-				STORE D INTO '/upload/pig_output/readme';
-						
-			- hdfs에서 확인
-				다른 터미널에서
-						
-				hdfs dfs -ls /upload/pig_output/readme     // 2개 뜨면 성공
-				// 단어 count 보기
-				hdfs dfs -cat /upload/pig_output/readme/part-r-00000
+		- 샘플 데이터를 hdfs로 전송
+			// README.txt가 있는지 확인
+			hdfs dfs -ls /upload
+					
+			// 있으면 안해도 되용
+			hdfs dfs -put $HADOOP_HOME/README.txt /upload
+					
+		- 맵리듀스 모드로 pig 실행
+			// pig가 꺼져있다면 이걸로 실행하고 켜져있으면 그냥 하던 곳에서 바로 하면 됨
+			pig -x mapreduce  	(사실 pig 만 실행해도 자동으로 되긴 함)
+			pig -x local
+			
+		- 샘플 데이터를 A 변수에 로드 후 단어 수 집계
+			grant> 에서
+					
+			A = LOAD '/upload/README.txt';
+					
+			// README.txt 에서 한 단어씩 뽑아서 한 줄씩 뽑아서 B에 저장
+			B = FOREACH A GENERATE FLATTEN(TOKENIZE((chararray)$0)) AS word;
+			DUMP B;
+					
+			// 단어 별로 묶음
+			C = GROUP B BY word;
+					
+			// 단어로 묶여있는 그룹별로 숫자를 세서 저장
+			D = FOREACH C GENERATE group AS word, COUNT($1) AS count;
+					
+			STORE D INTO '/upload/pig_output/readme';
+					
+		- hdfs에서 확인
+			다른 터미널에서
+					
+			hdfs dfs -ls /upload/pig_output/readme     // 2개 뜨면 성공
+			// 단어 count 보기
+			hdfs dfs -cat /upload/pig_output/readme/part-r-00000
 
 
-
+	5) 실습3
+		- http://hdr.undp.org/en/data
+			hdi-data.csv, export-data.csv
+			
+		- 샘플 데이터는 hdfs로 전송
+			hdfs dfs -put /root/source/hdi-data.csv /upload
+			hdfs dfs -ls /upload
+		
+		- 1인당 국민 총소득(gni)이 2000달러 이상인 국가들 출력
+			(순위, 국가, hdi, 기대수명, Mean years of schooling, Expected years of schooling, gni)
+			
+			A = LOAD '/upload/hdi-data.csv' using PigStorage(',') AS (id:int, country:chararray, hdi:float, lifeex:int, mych:int, eysch:int, gni:int);
+		
+			B = FILTER A BY gni >= 2000;
+			
+			C = ORDER B BY gni;
+			
+			STORE C INTO '/upload/hdi';
+			
+			hdfs dfs -ls /upload/hdi
+			hdfs dfs -cat /upload/hdi/part-r-00000
+			
+		-hdi-data.csv와 export-data의 조인
+			hdfs dfs -put /root/source/export-data.csv /upload
+			hdfs dfs -ls /upload 
+		
+			D = LOAD '/upload/export-data.csv' using PigStorage(',') AS (country:chararray, export:float);
+			E = JOIN C BY country, D BY country;
+			DUMP E;
+			
+			
+		
+		
+		
+		
+		
 	
