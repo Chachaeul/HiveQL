@@ -1,4 +1,4 @@
-스파크
+# 스파크 시작
 	1) 설치
 			- 프로그램준비
 				http://spark.apache.org에서 다운로드
@@ -33,6 +33,7 @@
 					exit()
 					
 				spark-sql 	: sql언어 사용
+					select 3+4;
 
 	2) StandardAlone 설치
 		free -g
@@ -58,10 +59,65 @@
 		stop-slave.sh
 		stop-master.sh
 		
+	3) Zeppelin : 노트북 서비스
+		spark : 2.1, zeppelin : 0.7 버전
 		
+		- 프로그램 다운로드	
+			https://zeppelin.apache.org/
+			
+		- 리눅스로 root폴더로 전송	
+			 - 리눅스로 전송 후 압축 풀고 이름은 zeppelin으로 변경
+                  tar zxvf zeppelin...
+                  mv zeppelin... zeppelin
+             
+            - 환경변수 설정
+                  gedit /etc/profile
+                  --------------------
+                  export ZEPPELIN_HOME=/root/zeppelin
+                  export PATH=$PATH:$ZEPPELIN_HOME/bin
+                  --------------------
+                  source /etc/profile
+                  reboot
+				  
+			- zeppelin 환경 설정
+				cd $ZEPPELIN_HOME/conf
+				cp zeppelin-site.xml.template zeppelin-site.xml
+				
+				gedit zeppelin-site.xml
+				---------------------------
+					서버 ip와 포트번호 설정
+				
+				cp zeppelin-env.sh.template zeppelin-env.sh				
+				gedit zeppelin-env.sh	
+				--------------------------
+					export JAVA_HOME=$JAVA_HOME
+					export MASTER=spark://master:7077
+					export SPARK_HOME=/root/spark
+					
+			- 서버 실행
+				start-master.sh
+				start-slave.sh spark://master:7077 -m 512m -c 1
+				zeppelin-daemon.sh start
+				jps
+			
+	4) 클라우드 사용법	
+		- Databricks
+			https://community.cloud.databricks.com
+			
+		- MS Asure HDinsight
 		
+	- 실습환경 설정 완료 -	
 		
+# 스파크 데이터 관리
+
+	1) RDD
+		- 저수준 API
+	
+	2) DataFrame
+		- 고수준 API
 		
+	3) DataSet
+		- 고수준 API
 		
 				
 				
