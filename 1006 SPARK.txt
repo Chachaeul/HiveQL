@@ -1,0 +1,74 @@
+1006 spark
+
+리눅스 마스터 터미널>
+start-master.sh
+start-slave.sh spark://master:7077 -m 512m -c 1
+
+윈도우 > http://192.168.10.1:8080 : worker 하나만 떠도 됨 (세대 뜨는 것이 정상)
+
+터미널 > 
+cd source
+ll
+gedit SampleApp.py
+
+firefox > spark.apache.org > 맨 아래 code example > 
+text_file = ~~~ 스크립트 복사해서 SampleApp.py에 복붙 > 
+수정한 최종 경로 :  sc.textFile("/root/hadoop2/README.txt")
+				saveAs~("/root/test")
+			
+맨 위에 추가 : from pyspark import SparkContext, SparkConf
+		
+			conf = SparkConf().setAppName("Spark Count")
+			sc = SparkContext(conf=conf)
+
+터미널 > 
+spark-submit --master local[4] SampleApp.py
+cd ~
+cd test
+ll
+
+putty 실행, 로그인 준비
+
+윈도우 > http://spark.apache.org/ > 도큐멘테이션 > lastest release > prog. guides > spark streaming > A Quick Example > python > 그 안의 코드들 메모장에 복사 해놓기 
+----------------------------------------------------------
+from pyspark import SparkContext
+from pyspark.streaming import StreamingContext
+
+# Create a local StreamingContext with two working thread and batch interval of 1 second
+sc = SparkContext("local[2]", "NetworkWordCount")
+ssc = StreamingContext(sc, 1)
+
+lines = ssc.socketTextStream("localhost", 9999)
+
+words = lines.flatMap(lambda line: line.split(" "))
+
+pairs = words.map(lambda word: (word, 1))
+wordCounts = pairs.reduceByKey(lambda x, y: x + y)
+
+wordCounts.pprint()
+
+ssc.start()             # Start the computation
+ssc.awaitTermination()  # Wait for the computation to terminate
+----------------------------------------------
+> network_wordcount.py 로 저장
+
+
+
+putty 하나 더 연결>
+nc -lk 9999
+
+다른 putty에 >
+cd source
+spark-submit /root/source/network_wordcount.py
+
+nc 한 putty에 > hello 치면 나머지 putty 어딘가에 (hello,1)실행이 될 것_아주 빠르게
+
+putty ctrl+c 하고 끄기
+//////스파크 완료
+
+
+
+			
+			
+			
+

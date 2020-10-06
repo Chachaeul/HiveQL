@@ -1,0 +1,105 @@
+0929 SPARK
+
+AWS에 접속
+				> 이름 누르면 밑에 '내 보안 자격증명' 클릭
+					> 엑세스 키 (AKIAIXTSG6BHMI2C4HOA)
+					> 없는 경우 만들기 눌러서 새로 만들면 된다
+					> 파일 다운 받아서 키랑 비밀번호 확인
+				
+				DataFrameTest (notebook새로 추가)
+				- 항공운항 데이터로 실습
+				
+				AWSAccessKeyId=AKIAIEESOGGMZJC2QCAA
+				AWSSecretKey=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
+
+ACCESS_KEY_ID = "AKIAIEESOGGMZJC2QCAA" /Key
+				SECRET_ACCESS_KEY = "BSc8MVkoz3frHJMy6oF4aQEdwSPLWHSXwNENUmZq" /비밀번호
+				ENCODED_SECRET_ACCESS_KEY = SECRET_ACCESS_KEY.replace("/", "%2F")
+					
+				dbutils.fs.mount("s3a://%s:%s@edwith-pyspark-dataset" % (ACCESS_KEY_ID, ENCODED_SECRET_ACCESS_KEY), "/mnt/us-carrier-dataset")
+				>>  True // 22년의 자료를 사용할 수 있다.
+				
+				display(dbutils.fs.ls("/mnt/us-carrier-dataset"))
+				
+				raw_df = spark.read.csv("/mnt/us-carrier-dataset", header="True", inferSchema="True")
+				
+				raw_df.printSchema()
+				
+				raw_df.count()
+				
+				raw_df.show(30)
+				
+				display(raw_df)
+
+
+# 데아터 전처리
+				##############
+				from pyspark.sql.functions import udf
+				from pyspark.sql.types import BooleanType, IntegerType, StringType
+				
+				# "NA"값을 null로 변경
+				def cleanString(value):
+				  if(value == None) or (value == "NA"):
+					return None
+				  else:
+					return value
+					
+				# string으로 설정된 숫자를 Integer로 변경
+				def stringToInteger(value):
+				  if value == "NA":
+					return None
+				  else:
+					return int(value)
+					
+				# Integer값을 Boolean으로 변경
+				def integerToBoolean(value):
+				  return False if value == 0 else True
+				  
+				cleanStrFunction = udf(stringToInteger, IntegerType())
+				cleanIntegerFunction = udf(integerToBoolean, BooleanType())
+				cleanStringFunction = udf(cleanString, StringType())
+								 
+				us_carrier_df \
+				  = raw_df.drop('DepTime', 'CRSDepTime', 'ArrTime', 'CRSArrTime', 'AirTime', 'ArrDelay', 'DepDelay', 'TaxiIn', 'TaxiOut', 'CancellationCode', 'CarrierDelay', 'WeatherDelay', 'NASDelay', 'SecurityDelay', 'LateAircraftDelay')\
+					  .withColumn("ActualElapsedTime", cleanStrFunction("ActualElapsedTime"))\
+					  .withColumn("CRSElapsedTime", cleanStrFunction("CRSElapsedTime"))\
+					  .withColumn("Distance", cleanStrFunction("Distance"))\
+					  .withColumn("Cancelled", cleanIntegerFunction("Cancelled"))\
+					  .withColumn("Diverted", cleanIntegerFunction("Diverted"))
+					  
+				
+				us_carrier_df.printSchema()
+				
+				us_carrier_df.cache()
+				
+				us_carrier_df.createGlobalTempView("us_carrier")
+				
+				
+				# 얼마나 많은 항공사가 있을까?
+
+				carriers_only_df = us_carrier_df.select("UniqueCarrier")
+				carriers_only_df.show(50)
+				
+				carriers_only_distinct_df = carriers_only_df.distinct()
+				carriers_only_distinct_df.show()
+				
+				spark.sql("SELECT DISTINCT UniqueCarrier FROM global_temp.us_carrier").show()
+				// SQL로 작성하는 방법
+				
+				-----
+				
+				# DL 항공사는 1990년에 얼마나 비행을 했는가?
+				from pyspark.sql.functions import col
+
+				us_carrier_df.filter(col("UniqueCarrier") == "DL").show()
+				us_carrier_df.filter(col("Year") == 1990).show()
+
+				## 위에 두개 한줄로 합한 것
+				us_carrier_df.filter(col("UniqueCarrier") == "DL").filter(col("Year") == 1990).show()
+
+				us_carrier_df.filter(col("UniqueCarrier") == "DL") & (col("Year") == 1990).show()
+
+				## sql 문으로 작성
+				spark.sql("SELECT * FROM global_temp.us_carrier WHERE UniqueCarrier == 'DL' AND Year == 1990").show()
+
+
